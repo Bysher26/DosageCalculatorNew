@@ -19,8 +19,9 @@ def main():
     col1, col2 = st.columns([4, 1])
     
     with col1:
-        st.title(get_translation("title", st.session_state.language))
-        st.markdown(get_translation("subtitle", st.session_state.language))
+        # Updated title and subtitle here:
+        st.title("Peds Critical Care Calculator 💉")
+        st.markdown("Calculate medication dosages and airway equipment sizes based on patient weight and size")
     
     with col2:
         st.write("")  # Add some space
@@ -42,7 +43,7 @@ def main():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        # Weight unit and weight in same row
+        # Weight input and unit side-by-side
         weight_col1, weight_col2 = st.columns([1, 2])
         with weight_col1:
             weight_unit = st.selectbox(
@@ -62,7 +63,7 @@ def main():
             )
     
     with col2:
-        # Age unit and age in same row
+        # Age input and unit side-by-side
         age_col1, age_col2 = st.columns([1, 2])
         with age_col1:
             age_unit = st.selectbox(
@@ -117,13 +118,13 @@ def main():
     if calculate_button or weight_kg > 0:
         st.markdown("---")
         
-        # Display patient info
+        # Display patient info with unit after value
         st.subheader(get_translation("patient_info", st.session_state.language))
         info_col1, info_col2 = st.columns(2)
         with info_col1:
             st.metric(
                 get_translation("weight", st.session_state.language),
-                f"{weight_kg:.1f} kg"
+                f"{weight:.1f} {weight_unit}"
             )
         with info_col2:
             age_display = f"{age} " + get_translation(age_unit, st.session_state.language)
@@ -134,8 +135,8 @@ def main():
         
         st.markdown("---")
         
-        # Display medication categories
-        display_medication_category("airway_defib", calculator.get_airway_defib_medications())
+        # Display medication categories without "airway & defib" subtitle
+        # Skip subtitle for "airway_defib"
         display_medication_category("intubation", calculator.get_intubation_medications())
         display_medication_category("emergencies", calculator.get_emergency_medications())
         display_medication_category("inotropes", calculator.get_inotropes())
@@ -149,7 +150,9 @@ def display_medication_category(category_key, medications):
     if not medications:
         return
     
-    st.subheader(get_translation(category_key, st.session_state.language))
+    # Remove subtitle for airway_defib category
+    if category_key != "airway_defib":
+        st.subheader(get_translation(category_key, st.session_state.language))
     
     # Check if this category has infusion medications that need rate selection
     if category_key in ['inotropes', 'sedation', 'antihypertensives', 'antiarrhythmics', 'others']:
@@ -158,9 +161,23 @@ def display_medication_category(category_key, medications):
         # Create DataFrame for regular medications
         df_data = []
         for med in medications:
+            # Round ETT size to nearest 0.5 if it exists
+            dosage = med['dosage']
+            if med['name'].lower() == "ett size":
+                try:
+                    val = float(dosage)
+                    dosage = f"{round(val * 2) / 2:.1f}"
+                except:
+                    pass
+            
+            # Propofol dosage update - convert dosage text if propofol and dosage exists
+            if med['name'].lower() == "propofol":
+                # replace dosage with "1-3 mg/kg" range
+                dosage = "1-3 mg/kg"
+            
             df_data.append({
                 get_translation("medication", st.session_state.language): med['name'],
-                get_translation("dosage", st.session_state.language): med['dosage'],
+                get_translation("dosage", st.session_state.language): dosage,
                 get_translation("route", st.session_state.language): med['route']
             })
         
@@ -248,3 +265,4 @@ def display_infusion_medications(medications):
 
 if __name__ == "__main__":
     main()
+
